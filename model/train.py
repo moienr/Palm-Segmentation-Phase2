@@ -7,7 +7,7 @@ Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
 """
 
 import torch
-from dataset import HorseZebraDataset
+from dataset import rgbnirDataset
 import sys
 from utils import save_checkpoint, load_checkpoint
 from torch.utils.data import DataLoader
@@ -23,68 +23,68 @@ from generator_model import Generator
 def train_fn(
     disc_H, disc_Z, gen_Z, gen_H, loader, opt_disc, opt_gen, l1, mse, d_scaler, g_scaler
 ):
-    H_reals = 0
-    H_fakes = 0
+    rgb_reals = 0
+    rgb_fakes = 0
     loop = tqdm(loader, leave=True)
 
-    for idx, (zebra, horse) in enumerate(loop):
-        zebra = zebra.to(config.DEVICE)
-        horse = horse.to(config.DEVICE)
+    for idx, (nir, rgb) in enumerate(loop):
+        nir = nir.to(config.DEVICE)
+        rgb = rgb.to(config.DEVICE)
 
         # Train Discriminators H and Z
         with torch.cuda.amp.autocast():
-            fake_horse = gen_H(zebra)
-            D_H_real = disc_H(horse)
-            D_H_fake = disc_H(fake_horse.detach())
-            H_reals += D_H_real.mean().item()
-            H_fakes += D_H_fake.mean().item()
-            D_H_real_loss = mse(D_H_real, torch.ones_like(D_H_real))
-            D_H_fake_loss = mse(D_H_fake, torch.zeros_like(D_H_fake))
-            D_H_loss = D_H_real_loss + D_H_fake_loss
+            fake_rgb = gen_H(nir)
+            D_rgb_real = disc_H(rgb)
+            D_rgb_fake = disc_H(fake_rgb.detach())
+            rgb_reals += D_rgb_real.mean().item()
+            rgb_fakes += D_rgb_fake.mean().item()
+            D_rgb_real_loss = mse(D_rgb_real, torch.ones_like(D_rgb_real))
+            D_rgb_fake_loss = mse(D_rgb_fake, torch.zeros_like(D_rgb_fake))
+            D_rgb_loss = D_rgb_real_loss + D_rgb_fake_loss
 
-            fake_zebra = gen_Z(horse)
-            D_Z_real = disc_Z(zebra)
-            D_Z_fake = disc_Z(fake_zebra.detach())
-            D_Z_real_loss = mse(D_Z_real, torch.ones_like(D_Z_real))
-            D_Z_fake_loss = mse(D_Z_fake, torch.zeros_like(D_Z_fake))
-            D_Z_loss = D_Z_real_loss + D_Z_fake_loss
+            fake_nir = gen_Z(rgb)
+            D_nir_real = disc_Z(nir)
+            D_nir_fake = disc_Z(fake_nir.detach())
+            D_nir_real_loss = mse(D_nir_real, torch.ones_like(D_nir_real))
+            D_nir_fake_loss = mse(D_nir_fake, torch.zeros_like(D_nir_fake))
+            D_nir_loss = D_nir_real_loss + D_nir_fake_loss
 
             # put it togethor
-            D_loss = (D_H_loss + D_Z_loss) / 2
+            D_loss = (D_rgb_loss + D_nir_loss) / 2
 
         opt_disc.zero_grad()
         d_scaler.scale(D_loss).backward()
         d_scaler.step(opt_disc)
         d_scaler.update()
 
-        # Train Generators H and Z
+        # Train Generators rgb and nir
         with torch.cuda.amp.autocast():
             # adversarial loss for both generators
-            D_H_fake = disc_H(fake_horse)
-            D_Z_fake = disc_Z(fake_zebra)
-            loss_G_H = mse(D_H_fake, torch.ones_like(D_H_fake))
-            loss_G_Z = mse(D_Z_fake, torch.ones_like(D_Z_fake))
+            D_rgb_fake = disc_H(fake_rgb)
+            D_nir_fake = disc_Z(fake_nir)
+            loss_G_H = mse(D_rgb_fake, torch.ones_like(D_rgb_fake))
+            loss_G_Z = mse(D_nir_fake, torch.ones_like(D_nir_fake))
 
             # cycle loss
-            cycle_zebra = gen_Z(fake_horse)
-            cycle_horse = gen_H(fake_zebra)
-            cycle_zebra_loss = l1(zebra, cycle_zebra)
-            cycle_horse_loss = l1(horse, cycle_horse)
+            cycle_nir = gen_Z(fake_rgb)
+            cycle_rgb = gen_H(fake_nir)
+            cycle_nir_loss = l1(nir, cycle_nir)
+            cycle_rgb_loss = l1(rgb, cycle_rgb)
 
             # identity loss (remove these for efficiency if you set lambda_identity=0)
-            identity_zebra = gen_Z(zebra)
-            identity_horse = gen_H(horse)
-            identity_zebra_loss = l1(zebra, identity_zebra)
-            identity_horse_loss = l1(horse, identity_horse)
+            identity_nir = gen_Z(nir)
+            identity_rgb = gen_H(rgb)
+            identity_nir_loss = l1(nir, identity_nir)
+            identity_rgb_loss = l1(rgb, identity_rgb)
 
             # add all togethor
             G_loss = (
                 loss_G_Z
                 + loss_G_H
-                + cycle_zebra_loss * config.LAMBDA_CYCLE
-                + cycle_horse_loss * config.LAMBDA_CYCLE
-                + identity_horse_loss * config.LAMBDA_IDENTITY
-                + identity_zebra_loss * config.LAMBDA_IDENTITY
+                + cycle_nir_loss * config.LAMBDA_CYCLE
+                + cycle_rgb_loss * config.LAMBDA_CYCLE
+                + identity_rgb_loss * config.LAMBDA_IDENTITY
+                + identity_nir_loss * config.LAMBDA_IDENTITY
             )
 
         opt_gen.zero_grad()
@@ -93,17 +93,17 @@ def train_fn(
         g_scaler.update()
 
         if idx % 200 == 0:
-            save_image(fake_horse * 0.5 + 0.5, f"saved_images/horse_{idx}.png")
-            save_image(fake_zebra * 0.5 + 0.5, f"saved_images/zebra_{idx}.png")
+            save_image(fake_rgb * 0.5 + 0.5, f"saved_images/rgb_{idx}.png")
+            save_image(fake_nir * 0.5 + 0.5, f"saved_images/nir_{idx}.png")
 
-        loop.set_postfix(H_real=H_reals / (idx + 1), H_fake=H_fakes / (idx + 1))
+        loop.set_postfix(rgb_real=rgb_reals / (idx + 1), rgb_fake=rgb_fakes / (idx + 1))
 
 
 def main():
     disc_H = Discriminator(in_channels=3).to(config.DEVICE)
-    disc_Z = Discriminator(in_channels=3).to(config.DEVICE)
-    gen_Z = Generator(img_channels=3, num_residuals=9).to(config.DEVICE)
-    gen_H = Generator(img_channels=3, num_residuals=9).to(config.DEVICE)
+    disc_Z = Discriminator(in_channels=1).to(config.DEVICE)
+    gen_Z = Generator(in_channels=3,out_channels=1, num_residuals=9).to(config.DEVICE)
+    gen_H = Generator(in_channels=1,out_channels=3, num_residuals=9).to(config.DEVICE)
     opt_disc = optim.Adam(
         list(disc_H.parameters()) + list(disc_Z.parameters()),
         lr=config.LEARNING_RATE,
@@ -145,14 +145,14 @@ def main():
             config.LEARNING_RATE,
         )
 
-    dataset = HorseZebraDataset(
-        root_horse=config.TRAIN_DIR + "/horses",
-        root_zebra=config.TRAIN_DIR + "/zebras",
+    dataset = rgbnirDataset(
+        root_rgb=config.TRAIN_DIR + "/rgbs",
+        root_nir=config.TRAIN_DIR + "/nirs",
         transform=config.transforms,
     )
-    val_dataset = HorseZebraDataset(
-        root_horse="cyclegan_test/horse1",
-        root_zebra="cyclegan_test/zebra1",
+    val_dataset = rgbnirDataset(
+        root_rgb="cyclegan_test/rgb1",
+        root_nir="cyclegan_test/nir1",
         transform=config.transforms,
     )
     val_loader = DataLoader(
