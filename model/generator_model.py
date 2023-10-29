@@ -40,9 +40,27 @@ class ResidualBlock(nn.Module):
 class Generator(nn.Module):
     def __init__(self, in_channels,out_channels, num_features=64, num_residuals=9):
         super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.initial = nn.Sequential(
             nn.Conv2d(
                 in_channels,
+                num_features,
+                kernel_size=7,
+                stride=1,
+                padding=3,
+                padding_mode="reflect",
+            ),
+            nn.InstanceNorm2d(num_features),
+            nn.ReLU(inplace=True),
+        )
+        
+        # This is for the identity loss, so that the model can learn to copy the input image
+        # since the input and output may have different number of channels, we have a backup initial layer
+        # that does a convolution to match the number of channels
+        self.initial_identity = nn.Sequential(
+            nn.Conv2d(
+                out_channels,
                 num_features,
                 kernel_size=7,
                 stride=1,
@@ -100,9 +118,23 @@ class Generator(nn.Module):
             padding=3,
             padding_mode="reflect",
         )
+        
 
     def forward(self, x):
-        x = self.initial(x)
+        """
+        Input:
+            x: (B, in_channels, H, W) tensor
+        Output:
+            out: (B, out_channels, H, W), (B, in_channels, H, W) | the second output is for the identity loss.
+        
+        """
+        if x.shape[1] == self.in_channels:
+            x = self.initial(x)
+        elif x.shape[1] == self.out_channels:
+            x = self.initial_identity(x)
+        else:
+            raise Exception("Input and output channels do not match!")
+        
         for layer in self.down_blocks:
             x = layer(x)
         x = self.res_blocks(x)
@@ -112,12 +144,18 @@ class Generator(nn.Module):
 
 
 def test():
-    in_channels = 3
-    out_channels = 1
+    in_channels = 1
+    out_channels = 3
     img_size = 256
     x = torch.randn((5, in_channels, img_size, img_size))
     gen = Generator(in_channels, out_channels)
-    print(gen(x).shape)
+    gen_fake = gen(x)
+    print(f"gen_fake: {gen_fake.shape}")
+    
+    # test identity
+    identity = gen(gen_fake)
+    print(f"identity: {identity.shape}")
+    
 
 
 if __name__ == "__main__":
