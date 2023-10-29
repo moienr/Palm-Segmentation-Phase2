@@ -38,11 +38,11 @@ class ResidualBlock(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, img_channels, num_features=64, num_residuals=9):
+    def __init__(self, in_channels,out_channels, num_features=64, num_residuals=9):
         super().__init__()
         self.initial = nn.Sequential(
             nn.Conv2d(
-                img_channels,
+                in_channels,
                 num_features,
                 kernel_size=7,
                 stride=1,
@@ -94,7 +94,7 @@ class Generator(nn.Module):
 
         self.last = nn.Conv2d(
             num_features * 1,
-            img_channels,
+            out_channels,
             kernel_size=7,
             stride=1,
             padding=3,
@@ -112,10 +112,11 @@ class Generator(nn.Module):
 
 
 def test():
-    img_channels = 3
+    in_channels = 3
+    out_channels = 1
     img_size = 256
-    x = torch.randn((2, img_channels, img_size, img_size))
-    gen = Generator(img_channels, 9)
+    x = torch.randn((5, in_channels, img_size, img_size))
+    gen = Generator(in_channels, out_channels)
     print(gen(x).shape)
 
 
