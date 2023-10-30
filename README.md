@@ -6,18 +6,21 @@ In the last project we anotated the palm trees in RGB Drone Images and trained a
 
 
 # Methodology
-At this phase, we have acces to a small dataset of RGB+NIR Drone image, again from ahvaz, and we want to use the NIR channel to improve the segmentation results. 
 
-We need to transfrom our old dataset, to match the new data. And we can take two different approaches:
+At this phase, we have access to a small dataset of RGB+NIR Drone images from Ahvaz, and we want to use the NIR channel to improve the segmentation results.
+
+We need to transform our old dataset to match the new data. There are two different approaches we can consider:
 
 1. ~~Only use the RGB channel of the new data, simply use the old Model.~~
 
-The above method is not an ideal approach as we are neglecting the NIR channel, a valuable band in Vegetation Segmentation!
+   The above method is not an ideal approach as we are neglecting the NIR channel, a valuable band in Vegetation Segmentation!
 
+   Thus we propose the following method:
 
-Thus we propose the following method:
+2. **Recommended Method:** Use a GAN to add the NIR channel to the old dataset, then train the model on the newly created dataset. After that, fine-tune the model using only a small portion of our new dataset. Finally, test the model on the rest of the new dataset.
 
-2. Use a GAN to add the NIR channel to the old dataset, then train the model on the newly created dataset. Then we fine tune the model using only a small portion of our new dataset. then we test the model on the rest of the new dataset.
+This second approach ensures that we make full use of the NIR data for vegetation segmentation, resulting in more accurate and robust results.
+se a GAN to add the NIR channel to the old dataset, then train the model on the newly created dataset. Then we fine tune the model using only a small portion of our new dataset. then we test the model on the rest of the new dataset.
 
 ## Model
 RGB and NIR data are often disposed to georefrnce errors. In order to over come this problem we needed and `Unpaired Image-to-Image Translation` model. We used the [CycleGAN](https://arxiv.org/abs/1703.10593) model to generate the NIR channel from the RGB channel.
