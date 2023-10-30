@@ -1,4 +1,4 @@
-# Palm Segmentation Phase 2
+# Palm Segmentation Phase 2: CycleGAN for Unpaired NIR Generation from RGB Images.
 This is the scond phase of the [Large Scene Segmentation of Palm Trees in Ahvaz City Using U-Net Architecture on High-Resolution UAV Images](https://github.com/moienr/Palm-Segmentation)
 
 ## Summary
