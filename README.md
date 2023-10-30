@@ -41,12 +41,11 @@ By only using 10% of the new dataset and before fine tuning the model. The resul
 | SSIM   | 0.62  |
 | PSNR   | 16.2 |
 
-![image1](imgs\Picture1.png)
-![image2](imgs\Picture2.png)
-![image3](imgs\Picture3.png)
-![image4](imgs\Picture4.png)
-![image5](imgs\Picture5.png)
-
+![image1](imgs/Picture1.png)
+![image2](imgs/Picture2.png)
+![image3](imgs/Picture3.png)
+![image4](imgs/Picture4.png)
+![image5](imgs/Picture5.png)
 
 
 
